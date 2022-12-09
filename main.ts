@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 import express from "express"
 import { InteractionResponseType, InteractionType, verifyKey } from "discord-interactions"
-import { ChannelManager, Client, Events, GatewayIntentBits, Message, MessageManager } from "discord.js";
+import { AnyAPIActionRowComponent, ChannelManager, Client, Events, GatewayIntentBits, Message, MessageManager } from "discord.js";
 import { writeFileSync, readFileSync } from "fs"
 import { program } from "commander"
 
@@ -50,6 +50,16 @@ const mapCountsOfReactions = (a: [string, Message][], emojiName: string) => {
     return a.map(v => [v[0], v[1].content, v[1].reactions.cache.find(r => r.emoji.name === emojiName)?.count, link(v[1].channelId, v[0])]).filter(v => v[2])
 }
 
+const jsonToCsv = (res: Record<string, [string, string, string, string]>) => {
+    const mapInner = (v: string[]) => [v[3], v[2]]
+    //@ts-ignore
+    const mapOuter = (v: Record<string, [string, string, string, string]>) => [v[0], v[1].map(mapInner)]
+    //@ts-ignore
+    const recs = Object.entries(res).map(mapOuter).map(v => v[1].map(i => [v[0], ...i])).flat()
+    const lines = ['channel,link,reactions', ...recs.map(([c, l, o]) => `${c},${l},${o}`)]
+    writeFileSync("results.csv", lines.join('\n'))
+}
+
 const parseMsgs = (allMessages: Record<string, any>, emojiName: string) => {
     let reactedMsgs: Record<string, any> = Object.entries(allMessages).reduce((acc, [channel, messages]) => (
         {
@@ -63,6 +73,7 @@ const parseMsgs = (allMessages: Record<string, any>, emojiName: string) => {
     reactedMsgs['all'] = Object.values(reactedMsgs).flat().sort((a, b) => b[2] - a[2])
 
     writeFileSync("results.json", JSON.stringify(reactedMsgs))
+    jsonToCsv(reactedMsgs)
 }
 
 const retrieve = () => {
@@ -80,7 +91,7 @@ const retrieve = () => {
             writeFileSync("messages.json", JSON.stringify(allMessages))
         }
 
-        parseMsgs(allMessages, 'omegalul')
+        parseMsgs(allMessages, 'dogshit')
 
         process.exit()
     })
