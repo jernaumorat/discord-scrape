@@ -44,21 +44,25 @@ const getChannelMessages = async (channel: MessageManager) => {
     return messages
 }
 
+const link = (c: string, m: string) => `https://discord.com/channels/${guildId}/${c}/${m}`
+
 const mapCountsOfReactions = (a: [string, Message][], emojiName: string) => {
-    return a.map(v => [v[0], v[1].content, v[1].reactions.cache.find(r => r.emoji.name === emojiName)?.count]).filter(v => v[2])
+    return a.map(v => [v[0], v[1].content, v[1].reactions.cache.find(r => r.emoji.name === emojiName)?.count, link(v[1].channelId, v[0])]).filter(v => v[2])
 }
 
-const parseMsgs = (allMessages: Record<string, any>) => {
-    for (const [channel, messages] of Object.entries(allMessages)) {
-        console.log(channel)
-        //@ts-ignore
-        const topTen = mapCountsOfReactions(messages, 'omegalul').sort((a, b) => b[2] - a[2]).slice(0, 10)
-        console.log(topTen.map(v => [
-            `https://discord.com/channels/${guildId}/${channels.find(v => v[1] === channel)![0]}/${v[0]}`,
-            v[1],
-            v[2]
-        ]))
-    }
+const parseMsgs = (allMessages: Record<string, any>, emojiName: string) => {
+    let reactedMsgs: Record<string, any> = Object.entries(allMessages).reduce((acc, [channel, messages]) => (
+        {
+            ...acc,
+            //@ts-ignore
+            [channel]: mapCountsOfReactions(messages, emojiName).sort((a, b) => b[2] - a[2])
+        }
+    ), {})
+
+    //@ts-ignore
+    reactedMsgs['all'] = Object.values(reactedMsgs).flat().sort((a, b) => b[2] - a[2])
+
+    writeFileSync("results.json", JSON.stringify(reactedMsgs))
 }
 
 const retrieve = () => {
@@ -76,7 +80,7 @@ const retrieve = () => {
             writeFileSync("messages.json", JSON.stringify(allMessages))
         }
 
-        parseMsgs(allMessages)
+        parseMsgs(allMessages, 'omegalul')
 
         process.exit()
     })
